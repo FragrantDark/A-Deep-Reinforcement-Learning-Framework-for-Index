@@ -9,7 +9,7 @@ class Parameters:
 
     def __init__(self):
         # File location
-        self.root_dir = ''
+        self.root_dir = '/Users/zhangqi/PycharmProjects/A-Deep-Reinforcement-Learning-Framework-for-Index'
         self.data_file_location = self.root_dir + '/data/'
         self.model_file_location = self.root_dir + '/model/model_0'
         self.figure_file_location = self.root_dir + ''
@@ -34,8 +34,8 @@ class Parameters:
         self.height_cov3 = self.n_cov2_core + 1
 
         # Training
-        self.n_epochs = int(10e5)
-        self.display_step = int(10e2)
+        self.n_epochs = int(1e6)
+        self.display_step = int(1e3)
 
         self.start_learning_rate = 0.001
         self.decay_steps = 10e3
