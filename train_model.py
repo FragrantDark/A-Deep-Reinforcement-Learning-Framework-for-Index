@@ -133,7 +133,7 @@ class NNAgent:
             sess.run(init)
 
             # Training
-            for epoch in range(1, self.n_epochs + 1):
+            for epoch in range(self.n_epochs):
                 rand_i, input_x, input_y, last_w = dataset.next_batch()
                 # debug
                 logf.write('epoch: %d\n' % epoch)
@@ -159,8 +159,6 @@ class NNAgent:
                 if epoch % self.checkpoint == 0:
                     cp_model = '%s_%d' % (self.model_file_location, epoch)
                     tf.train.Saver().save(sess, cp_model)
-                    self.test(dataset, cp_model)
-                    self.plot_test_result(dataset, 'fig_%d' % epoch)
 
             # Save model
             saver = tf.train.Saver()
@@ -231,3 +229,5 @@ class NNAgent:
             plt.plot(result_list_control, label='control', color='red')
             plt.legend()
             fig.savefig(self.figure_file_location + img_name + '.jpg')
+
+            return plt

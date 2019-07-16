@@ -29,7 +29,7 @@ class Parameters:
         # Training
         self.n_epochs = int(1e6)
         self.display_step = int(1e3)
-        self.checkpoint = int(2e4)
+        self.checkpoint = int(1e4)
 
         self.start_learning_rate = 0.001
         self.decay_steps = 10e3
