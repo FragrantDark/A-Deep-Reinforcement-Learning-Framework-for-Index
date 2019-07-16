@@ -12,7 +12,7 @@ class Parameters:
         self.root_dir = '/Users/zhangqi/PycharmProjects/A-Deep-Reinforcement-Learning-Framework-for-Index'
         self.data_file_location = self.root_dir + '/data/'
         self.model_file_location = self.root_dir + '/model/model_0'
-        self.figure_file_location = self.root_dir + ''
+        self.figure_file_location = self.root_dir + '/'
         self.logfile = self.root_dir + '/log/t.log'
 
         # Input data
