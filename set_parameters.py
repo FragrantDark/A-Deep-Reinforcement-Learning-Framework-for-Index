@@ -27,8 +27,9 @@ class Parameters:
         self.height_cov3 = self.n_cov2_core + 1
 
         # Training
-        self.n_epochs = int(1e4)
+        self.n_epochs = int(1e6)
         self.display_step = int(1e3)
+        self.checkpoint = int(2e4)
 
         self.start_learning_rate = 0.001
         self.decay_steps = 10e3
@@ -40,7 +41,7 @@ class Parameters:
         self.root_dir = '/Users/zhangqi/PycharmProjects/A-Deep-Reinforcement-Learning-Framework-for-Index'
         self.data_file_location = self.root_dir + '/data/'
         self.model_file_location = self.root_dir + '/model/model_c%f_e%d' % (self.commission_rate, self.n_epochs)
-        self.figure_file_location = self.root_dir + '/'
+        self.figure_file_location = self.root_dir + '/figures/'
         self.logfile = self.root_dir + '/log/t.log'
 
 

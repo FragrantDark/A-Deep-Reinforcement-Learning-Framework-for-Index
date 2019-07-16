@@ -19,4 +19,4 @@ if __name__ == '__main__':
 
     model.test(dataset)
 
-    model.plot_test_result(dataset)
+    model.plot_test_result(dataset, 'fig')

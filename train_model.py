@@ -53,6 +53,7 @@ class NNAgent:
 
         self.n_epochs = parameters.n_epochs
         self.display_step = parameters.display_step
+        self.checkpoint = parameters.checkpoint
 
         self.start_learning_rate = parameters.start_learning_rate
         self.decay_steps = parameters.decay_steps
@@ -134,12 +135,6 @@ class NNAgent:
             # Training
             for epoch in range(self.n_epochs):
                 rand_i, input_x, input_y, last_w = dataset.next_batch()
-    # =============================================================================
-    #             # check data
-    #             assert not np.any(np.isnan(input_x))
-    #             assert not np.any(np.isnan(input_y))
-    #             assert not np.any(np.isnan(last_w))
-    # =============================================================================
                 # debug
                 logf.write('epoch: %d\n' % epoch)
                 logf.write('last_w: %s\n' % last_w)
@@ -160,6 +155,10 @@ class NNAgent:
                 # Display
                 if epoch % self.display_step == 0:
                     print('epoch %d/%d, loss=%.5f' % (epoch, self.n_epochs, loss))
+
+                if epoch % self.checkpoint == 0:
+                    self.test(dataset)
+                    self.plot_test_result(dataset, 'fig_%d' % epoch)
 
             # Save model
             saver = tf.train.Saver()
@@ -192,7 +191,7 @@ class NNAgent:
             sess.close()
             print('Test done.')
 
-    def plot_test_result(self, dataset):
+    def plot_test_result(self, dataset, img_name):
         with open(self.logfile, 'w') as logf:
             matrix_y = dataset.test_dataset     # (timestamps, varieties, features)
             matrix_w = dataset.test_matrix_w    # (timestamps, varieties)
@@ -203,15 +202,13 @@ class NNAgent:
             w_t_prime = (matrix_w[:-1, :] * y) / p_vec[:, None]     # (n-1, varieties)
             w_t = matrix_w[1:, :]   # (n-1, v)
 
-            miu0 = 1 - np.sum(np.abs(w_t_prime - w_t), axis=1) * self.commission_rate   # (n-1)
-            miu1 = miu_iter_nd(miu0, w_t, w_t_prime, self.commission_rate)
-            print(type(miu0))
-            print(miu0)
-            print(type(miu1))
+            miu0 = 1
+            miu1 = 1 - np.sum(np.abs(w_t_prime - w_t), axis=1) * self.commission_rate   # (n-1)
             print(miu1)
             while np.sum(np.abs(miu0-miu1)) > 1e-6:
                 miu0 = miu1
                 miu1 = miu_iter_nd(miu1, w_t, w_t_prime, self.commission_rate)
+            print(miu1)
 
             rr_vec = p_vec * miu1   # (n-1)
             rr_vec = np.concatenate((np.ones(1), rr_vec), axis=0)   # (n)
@@ -227,8 +224,8 @@ class NNAgent:
             for i in range(len(rr_vec_control)):
                 result_list_control.append(result_list_control[-1] * rr_vec_control[i])
 
-            fig_1 = plt.figure(figsize=(16, 9))
-            plt.plot(result_list, label='test')
-            plt.plot(result_list_control, label='control')
+            fig = plt.figure(figsize=(16, 9))
+            plt.plot(result_list, label='test', color='blue')
+            plt.plot(result_list_control, label='control', color='red')
             plt.legend()
-            fig_1.savefig(self.figure_file_location + 'fig_1.jpg')
+            fig.savefig(self.figure_file_location + img_name + '.jpg')
