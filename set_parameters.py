@@ -13,6 +13,7 @@ class Parameters:
         self.data_file_location = self.root_dir + '/data/'
         self.model_file_location = self.root_dir + '/model/model_0'
         self.figure_file_location = self.root_dir + ''
+        self.logfile = self.root_dir + '/log/t.log'
 
         # Input data
         self.varieties = ['a', 'i', 'j', 'jm',

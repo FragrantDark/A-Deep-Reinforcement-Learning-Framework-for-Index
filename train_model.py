@@ -17,7 +17,7 @@ def miu_iter(miu, wt, wt_prime, c):
     :param wt:          w_t, shape=(timestamps, varieties)
     :param wt_prime:    w_t prime, has same shape with w_t
     :param c:           commission rate
-    :return:            new miu
+    :return:            new miu, shape=(timestamps)
     """
     miu = miu[:, None]
     return 1 - (2 * c - c ** 2) * tf.reduce_sum(tf.nn.relu(wt_prime - miu * wt), axis=1)
@@ -49,6 +49,8 @@ class NNAgent:
 
         self.model_file_location = parameters.model_file_location
         self.figure_file_location = parameters.figure_file_location
+
+        self.logfile = parameters.logfile
 
         # tf Graph
         # input_x shape [n_batch, 50, 7, 3]
@@ -108,92 +110,97 @@ class NNAgent:
                                      allow_soft_placement=True)
 
     def train(self, dataset):
+        with open(self.logfile, 'w') as logf:
+            print('\nTraining start...')
+            init = tf.global_variables_initializer()
+            sess = tf.Session(config=self.config)
 
-        print('\nTraining start...')
-        init = tf.global_variables_initializer()
-        sess = tf.Session(config=self.config)
+            # Run the initializer
+            sess.run(init)
 
-        # Run the initializer
-        sess.run(init)
+            # Training
+            for epoch in range(self.n_epochs):
+                rand_i, input_x, input_y, last_w = dataset.next_batch()
+    # =============================================================================
+    #             # check data
+    #             assert not np.any(np.isnan(input_x))
+    #             assert not np.any(np.isnan(input_y))
+    #             assert not np.any(np.isnan(last_w))
+    # =============================================================================
+                # calculate output_w
+                _, loss, output_w, miu0, miu = sess.run([self.train_op, self.loss, self.output_w, self.mu0, self.miu],
+                                                         feed_dict={self.X: input_x,
+                                                                    self.y: input_y,
+                                                                    self.last_w: last_w})
+                # Write output_w into train_matrix_w
+                dataset.set_w(rand_i, output_w)
+                # Display
+                if epoch % self.display_step == 0:
+                    print(loss)
 
-        # Training
-        for epoch in range(self.n_epochs):
-            rand_i, input_x, input_y, last_w = dataset.next_batch()
-# =============================================================================
-#             # check data
-#             assert not np.any(np.isnan(input_x))
-#             assert not np.any(np.isnan(input_y))
-#             assert not np.any(np.isnan(last_w))
-# =============================================================================
-            # calculate output_w
-            _, loss, output_w, miu0, miu = sess.run([self.train_op, self.loss, self.output_w, self.mu0, self.miu],
-                                         feed_dict={self.X: input_x,
-                                                    self.y: input_y,
-                                                    self.last_w: last_w})
-            # Write output_w into train_matrix_w
-            dataset.set_w(rand_i, output_w)
-            # Display
-            if epoch % self.display_step == 0:
-                print(loss)
+            # Save model
+            saver = tf.train.Saver()
+            saver.save(sess, self.model_file_location)
 
-        # Save model
-        saver = tf.train.Saver()
-        saver.save(sess, self.model_file_location)
-
-        sess.close()
-        print('Training done.')
+            sess.close()
+            print('Training done.')
 
     def test(self, dataset):
-        print('\nTesting')
-        n_test = dataset.n_test
-        n_timesteps = dataset.n_timesteps
+        with open(self.logfile, 'w') as logf:
+            print('\nTesting')
+            n_test = dataset.n_test
+            n_timesteps = dataset.n_timesteps
 
-        sess = tf.Session(config=self.config)
-        saver = tf.train.Saver()
-        saver.restore(sess, self.model_file_location)
+            sess = tf.Session(config=self.config)
+            saver = tf.train.Saver()
+            saver.restore(sess, self.model_file_location)
 
-        for i in range(0, n_test - n_timesteps):
-            input_data = dataset.test_dataset[None, i:n_timesteps + i + 1, :, :]  # [1, 51, 7, 3]
-            input_x = input_data[:, :-1, :, :] / input_data[:, -2, None, :, 0, None]  # [1, 50, 7, 3]
-            input_y = input_data[:, -1, :, 0] / input_data[:, -2, :, 0]  # [1, 7]
-            last_w = dataset.test_matrix_w[n_timesteps + i - 1, None, :]  # [1, 7]
+            for i in range(0, n_test - n_timesteps):
+                input_data = dataset.test_dataset[None, i:n_timesteps + i + 1, :, :]  # [1, 51, 7, 3]
+                input_x = input_data[:, :-1, :, :] / input_data[:, -2, None, :, 0, None]  # [1, 50, 7, 3]
+                input_y = input_data[:, -1, :, 0] / input_data[:, -2, :, 0]  # [1, 7]
+                last_w = dataset.test_matrix_w[n_timesteps + i - 1, None, :]  # [1, 7]
 
-            output_w = sess.run(self.output_w, feed_dict={self.X: input_x,
-                                                          self.y: input_y,
-                                                          self.last_w: last_w})
-            dataset.test_matrix_w[n_timesteps + i, :] = output_w
+                output_w = sess.run(self.output_w, feed_dict={self.X: input_x,
+                                                              self.y: input_y,
+                                                              self.last_w: last_w})
+                dataset.test_matrix_w[n_timesteps + i, :] = output_w
 
-        sess.close()
-        print('Test done.')
+            sess.close()
+            print('Test done.')
 
     def plot_test_result(self, dataset):
+        with open(self.logfile, 'w') as logf:
+            matrix_y = dataset.test_dataset     # (timestamps, varieties, features)
+            matrix_w = dataset.test_matrix_w    # (timestamps, varieties)
+            y = matrix_y[1:, :, 0] / matrix_y[:-1, :, 0]    # (n-1, varieties)
 
-        matrix_y = dataset.test_dataset
-        matrix_w = dataset.test_matrix_w
-        y = matrix_y[1:, :, 0] / matrix_y[:-1, :, 0]
+            p_vec = np.sum(matrix_w[:-1, :] * y, axis=1)    # (n-1)
 
-        p_vec = np.sum(matrix_w[:-1, :] * y, axis=1)
+            w_t_prime = (matrix_w[:-1, :] * y) / p_vec[:, None]     # (n-1, varieties)
+            w_t = matrix_w[1:, :]   # (n-1, v)
+            miu0 = 1
+            miu1 = 1 - np.sum(abs(w_t_prime - w_t), axis=1) * self.commission_rate   # (n-1)
+            while np.sum(miu0-miu1) > 1e-6:
+                miu0 = miu1
+                miu1 = miu_iter(miu1, w_t, w_t_prime, self.commission_rate)
 
-        w_t = (matrix_w[:-1, :] * y) / p_vec[:, None]
-        w_t_1 = matrix_w[1:, :]
-        mu = 1 - np.sum(abs(w_t - w_t_1), axis=1) * self.commission_rate
+            rr_vec = p_vec * miu1   # (n-1)
+            rr_vec = np.concatenate((np.ones(1), rr_vec), axis=0)   # (n)
+            result_list = [1]
+            for i in range(len(rr_vec)):
+                result_list.append(result_list[-1] * rr_vec[i])
 
-        rr_vec = p_vec * mu
-        rr_vec = np.concatenate((np.ones(1), rr_vec), axis=0)
-        result_list = [1]
-        for i in range(len(rr_vec)):
-            result_list.append(result_list[-1] * rr_vec[i])
+            # Identity weights
+            rr_vec_control = np.sum(y, axis=1) / self.n_varieties
+            rr_vec_control = np.concatenate((np.ones(1), rr_vec_control), axis=0)
 
-        # Identity weights
-        rr_vec_control = np.sum(y, axis=1) / self.n_varieties
-        rr_vec_control = np.concatenate((np.ones(1), rr_vec_control), axis=0)
+            result_list_control = [1]
+            for i in range(len(rr_vec_control)):
+                result_list_control.append(result_list_control[-1] * rr_vec_control[i])
 
-        result_list_control = [1]
-        for i in range(len(rr_vec_control)):
-            result_list_control.append(result_list_control[-1] * rr_vec_control[i])
-
-        fig_1 = plt.figure(figsize=(16, 9))
-        plt.plot(result_list, label='test')
-        plt.plot(result_list_control, label='control')
-        plt.legend()
-        fig_1.savefig(self.figure_file_location + 'fig_1.jpg')
+            fig_1 = plt.figure(figsize=(16, 9))
+            plt.plot(result_list, label='test')
+            plt.plot(result_list_control, label='control')
+            plt.legend()
+            fig_1.savefig(self.figure_file_location + 'fig_1.jpg')
