@@ -127,6 +127,11 @@ class NNAgent:
     #             assert not np.any(np.isnan(input_y))
     #             assert not np.any(np.isnan(last_w))
     # =============================================================================
+                # debug
+                logf.write('epoch: %d\n' % epoch)
+                logf.write('last_w: %s\n' % last_w)
+                logf.write('y: %s\n' % input_y)
+
                 # calculate output_w
                 _, loss, output_w, miu0, miu = sess.run([self.train_op, self.loss, self.output_w, self.mu0, self.miu],
                                                          feed_dict={self.X: input_x,
@@ -134,9 +139,14 @@ class NNAgent:
                                                                     self.last_w: last_w})
                 # Write output_w into train_matrix_w
                 dataset.set_w(rand_i, output_w)
+
+                # debug
+                logf.write('miu0: %s\nmiu: %s\n' % (miu0, miu))
+                logf.write('output_w: %s\n' % output_w)
+
                 # Display
                 if epoch % self.display_step == 0:
-                    print(loss)
+                    print('epoch %d/%d, loss=%.5f' % (epoch, self.n_epochs, loss))
 
             # Save model
             saver = tf.train.Saver()

@@ -41,6 +41,6 @@ class Parameters:
         self.decay_steps = 10e3
         self.decay_rate = 0.1
 
-        self.commission_rate = 0.001
+        self.commission_rate = 0.0001
 
 parameters = Parameters()
