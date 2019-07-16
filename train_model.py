@@ -104,10 +104,10 @@ class NNAgent:
         future_omega = tf.multiply(self.y, self.output_w) / omega_y[:, None]  # [n_batch,7]
         w_t_prime = future_omega[:-1, :]
         w_t = self.output_w[1:, :]
-        self.mu0 = 1 - tf.reduce_sum(tf.abs(w_t_prime - w_t), axis=1) * self.commission_rate  # [n_batch-1]
-        self.miu = miu_iter_tensor(self.mu0, w_t_prime, w_t, self.commission_rate)
-        for i in range(20):
-            self.miu = miu_iter_tensor(self.miu, w_t_prime, w_t, self.commission_rate)
+        self.miu = 1 - tf.reduce_sum(tf.abs(w_t_prime - w_t), axis=1) * self.commission_rate  # [n_batch-1]
+        # self.miu = miu_iter_tensor(self.mu0, w_t_prime, w_t, self.commission_rate)
+        # for i in range(20):
+        #     self.miu = miu_iter_tensor(self.miu, w_t_prime, w_t, self.commission_rate)
 
         p_vec = tf.multiply(omega_y, tf.concat([tf.ones(1, dtype='float32'), self.miu], axis=0))  # [n_batch]
         self.loss = -tf.reduce_mean(tf.log(p_vec))
@@ -141,7 +141,7 @@ class NNAgent:
                 logf.write('y: %s\n' % input_y)
 
                 # calculate output_w
-                _, loss, output_w, miu0, miu = sess.run([self.train_op, self.loss, self.output_w, self.mu0, self.miu],
+                _, loss, output_w, miu = sess.run([self.train_op, self.loss, self.output_w, self.miu],
                                                          feed_dict={self.X: input_x,
                                                                     self.y: input_y,
                                                                     self.last_w: last_w})
@@ -149,7 +149,7 @@ class NNAgent:
                 dataset.set_w(rand_i, output_w)
 
                 # debug
-                logf.write('miu0: %s\nmiu: %s\n' % (miu0, miu))
+                logf.write('miu: %s\n' % (miu))
                 logf.write('output_w: %s\n' % output_w)
 
                 # Display
@@ -187,6 +187,8 @@ class NNAgent:
                                                               self.y: input_y,
                                                               self.last_w: last_w})
                 dataset.test_matrix_w[n_timesteps + i, :] = output_w
+
+                logf.write('i:%d\nout_w:%s\nlast_w:%s\ny:%s\n\n' % (i, output_w, last_w, input_y))
 
             sess.close()
             print('Test done.')

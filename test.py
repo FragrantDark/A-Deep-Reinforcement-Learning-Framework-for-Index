@@ -14,6 +14,8 @@ if __name__ == '__main__':
 
     dataset = read_data.Dataset(parameters)
     model = train_model.NNAgent(parameters)
-    epoch = 10000
+    epoch = 140000
+    # dataset.test_matrix_w = dataset.train_matrix_w[:dataset.n_test, :]
+    # dataset.test_dataset = dataset.train_dataset[:dataset.n_test, :, :]
     model.test(dataset, '%s_%d' % (parameters.model_file_location, epoch))
     model.plot_test_result(dataset, 'fig_%d' % epoch).show()
