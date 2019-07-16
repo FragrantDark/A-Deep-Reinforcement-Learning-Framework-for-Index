@@ -9,9 +9,10 @@ class Parameters:
 
     def __init__(self):
         # File location
-        self.data_file_location = 'C:/HTH/DFIT/reinforcement/data/'
-        self.model_file_location = 'C:/HTH/DFIT/reinforcement/model/model_0'
-        self.figure_file_location = 'C:/HTH/DFIT/reinforcement/'
+        self.root_dir = ''
+        self.data_file_location = self.root_dir + '/data/'
+        self.model_file_location = self.root_dir + '/model/model_0'
+        self.figure_file_location = self.root_dir + ''
 
         # Input data
         self.varieties = ['a', 'i', 'j', 'jm',

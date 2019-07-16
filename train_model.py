@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+
 class NNAgent:
 
     def __init__(self, parameters):
@@ -45,38 +46,38 @@ class NNAgent:
         cov1_core = tf.Variable(tf.random_normal([self.height_cov1, 1,
                                                   self.n_features, self.n_cov1_core]))
         raw_cov_layer1 = tf.nn.conv2d(input=self.X, filter=cov1_core,
-                                      strides=[1, 1, 1, 1], padding='VALID') # [n_batch, 48, 7, 2]
+                                      strides=[1, 1, 1, 1], padding='VALID')  # [n_batch, 48, 7, 2]
         cov_layer1 = tf.nn.relu(raw_cov_layer1)
 
         # Cov 2 core: [height: 48, width: 1, in_channels: 2, out_channels: 20]
         cov2_core = tf.Variable(tf.random_normal([self.height_cov2, 1,
                                                   self.n_cov1_core, self.n_cov2_core]))
         raw_cov_layer2 = tf.nn.conv2d(input=cov_layer1, filter=cov2_core,
-                                      strides=[1, 1, 1, 1], padding='VALID') # [n_batch, 1, 7, 20]
+                                      strides=[1, 1, 1, 1], padding='VALID')  # [n_batch, 1, 7, 20]
         cov_layer2 = tf.nn.relu(raw_cov_layer2)
 
-        self.last_w = tf.placeholder('float32', [None, self.n_varieties]) # [n_batch, 7]
-        last_w_1 = tf.expand_dims(self.last_w, axis=1) # [n_batch, 1, 7]
-        last_w_2 = tf.expand_dims(last_w_1, axis=3) # [n_batch, 1, 7, 1]
-        concat_layer = tf.concat([cov_layer2, last_w_2], axis=3) # [n_batch, 1, 7, 21]
+        self.last_w = tf.placeholder('float32', [None, self.n_varieties])  # [n_batch, 7]
+        last_w_1 = tf.expand_dims(self.last_w, axis=1)  # [n_batch, 1, 7]
+        last_w_2 = tf.expand_dims(last_w_1, axis=3)  # [n_batch, 1, 7, 1]
+        concat_layer = tf.concat([cov_layer2, last_w_2], axis=3)  # [n_batch, 1, 7, 21]
 
         # Cov 3 core: [height: 1, width: 1, in_channels: 21, out_channels: 1]
         cov3_core = tf.Variable(tf.random_normal([1, 1, self.height_cov3, 1]))
         raw_cov_layer3 = tf.nn.conv2d(input=concat_layer, filter=cov3_core,
-                                      strides=[1, 1, 1, 1], padding='VALID') # [n_batch, 1, 7, 1]
-        self.output_w = tf.nn.softmax(tf.squeeze(raw_cov_layer3)) # [n_batch, 7]
+                                      strides=[1, 1, 1, 1], padding='VALID')  # [n_batch, 1, 7, 1]
+        self.output_w = tf.nn.softmax(tf.squeeze(raw_cov_layer3))  # [n_batch, 7]
 
         # Define loss and optimizer
         # input_y shape [n_batch, 7]
         self.y = tf.placeholder('float32', [None, self.n_varieties])
-        omega_y = tf.reduce_sum(tf.multiply(self.y, self.output_w), axis=1) # [n_batch]
+        omega_y = tf.reduce_sum(tf.multiply(self.y, self.output_w), axis=1)  # [n_batch]
 
-        future_omega = tf.multiply(self.y, self.output_w) / omega_y[:,None] # [n_batch,7]
-        w_t = future_omega[:-1,:]
-        w_t_1 = self.output_w[1:,:]
-        mu = 1 - tf.reduce_sum(tf.abs(w_t - w_t_1), axis=1) * self.commission_rate # [n_batch-1]
+        future_omega = tf.multiply(self.y, self.output_w) / omega_y[:, None]  # [n_batch,7]
+        w_t = future_omega[:-1, :]
+        w_t_1 = self.output_w[1:, :]
+        mu = 1 - tf.reduce_sum(tf.abs(w_t - w_t_1), axis=1) * self.commission_rate  # [n_batch-1]
 
-        p_vec = tf.multiply(omega_y, tf.concat([tf.ones(1, dtype='float32'), mu], axis=0)) # [n_batch]
+        p_vec = tf.multiply(omega_y, tf.concat([tf.ones(1, dtype='float32'), mu], axis=0))  # [n_batch]
         self.loss = -tf.reduce_mean(tf.log(p_vec))
 
         self.global_step = tf.Variable(0, trainable=False)
@@ -136,15 +137,15 @@ class NNAgent:
         saver.restore(sess, self.model_file_location)
 
         for i in range(0, n_test - n_timesteps):
-            input_data = dataset.test_dataset[None,i:n_timesteps + i + 1,:,:] # [1, 51, 7, 3]
-            input_x = input_data[:,:-1,:,:] / input_data[:,-2,None,:,0,None] # [1, 50, 7, 3]
-            input_y = input_data[:,-1,:,0] / input_data[:,-2,:,0] # [1, 7]
-            last_w = dataset.test_matrix_w[n_timesteps + i - 1,None,:] # [1, 7]
+            input_data = dataset.test_dataset[None, i:n_timesteps + i + 1, :, :]  # [1, 51, 7, 3]
+            input_x = input_data[:, :-1, :, :] / input_data[:, -2, None, :, 0, None]  # [1, 50, 7, 3]
+            input_y = input_data[:, -1, :, 0] / input_data[:, -2, :, 0]  # [1, 7]
+            last_w = dataset.test_matrix_w[n_timesteps + i - 1, None, :]  # [1, 7]
 
             output_w = sess.run(self.output_w, feed_dict={self.X: input_x,
                                                           self.y: input_y,
                                                           self.last_w: last_w})
-            dataset.test_matrix_w[n_timesteps + i,:] = output_w
+            dataset.test_matrix_w[n_timesteps + i, :] = output_w
 
         sess.close()
         print('Test done.')
@@ -153,12 +154,12 @@ class NNAgent:
 
         matrix_y = dataset.test_dataset
         matrix_w = dataset.test_matrix_w
-        y = matrix_y[1:,:,0] / matrix_y[:-1,:,0]
+        y = matrix_y[1:, :, 0] / matrix_y[:-1, :, 0]
 
-        p_vec = np.sum(matrix_w[:-1,:] * y, axis=1)
+        p_vec = np.sum(matrix_w[:-1, :] * y, axis=1)
 
-        w_t = (matrix_w[:-1,:] * y) / p_vec[:,None]
-        w_t_1 = matrix_w[1:,:]
+        w_t = (matrix_w[:-1, :] * y) / p_vec[:, None]
+        w_t_1 = matrix_w[1:, :]
         mu = 1 - np.sum(abs(w_t - w_t_1), axis=1) * self.commission_rate
 
         rr_vec = p_vec * mu
