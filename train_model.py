@@ -133,7 +133,7 @@ class NNAgent:
             sess.run(init)
 
             # Training
-            for epoch in range(self.n_epochs):
+            for epoch in range(1, self.n_epochs + 1):
                 rand_i, input_x, input_y, last_w = dataset.next_batch()
                 # debug
                 logf.write('epoch: %d\n' % epoch)
@@ -157,7 +157,9 @@ class NNAgent:
                     print('epoch %d/%d, loss=%.5f' % (epoch, self.n_epochs, loss))
 
                 if epoch % self.checkpoint == 0:
-                    self.test(dataset)
+                    cp_model = '%s_%d' % (self.model_file_location, epoch)
+                    tf.train.Saver().save(sess, cp_model)
+                    self.test(dataset, cp_model)
                     self.plot_test_result(dataset, 'fig_%d' % epoch)
 
             # Save model
@@ -167,7 +169,7 @@ class NNAgent:
             sess.close()
             print('Training done.')
 
-    def test(self, dataset):
+    def test(self, dataset, model):
         with open(self.logfile, 'w') as logf:
             print('\nTesting')
             n_test = dataset.n_test
@@ -175,7 +177,7 @@ class NNAgent:
 
             sess = tf.Session(config=self.config)
             saver = tf.train.Saver()
-            saver.restore(sess, self.model_file_location)
+            saver.restore(sess, model)
 
             for i in range(0, n_test - n_timesteps):
                 input_data = dataset.test_dataset[None, i:n_timesteps + i + 1, :, :]  # [1, 51, 7, 3]
