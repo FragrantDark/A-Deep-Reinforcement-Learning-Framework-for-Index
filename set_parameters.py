@@ -5,16 +5,9 @@ Created on Thu Jul  4 14:21:31 2019
 @author: dlymhth
 """
 
+
 class Parameters:
-
     def __init__(self):
-        # File location
-        self.root_dir = '/Users/zhangqi/PycharmProjects/A-Deep-Reinforcement-Learning-Framework-for-Index'
-        self.data_file_location = self.root_dir + '/data/'
-        self.model_file_location = self.root_dir + '/model/model_0'
-        self.figure_file_location = self.root_dir + '/'
-        self.logfile = self.root_dir + '/log/t.log'
-
         # Input data
         self.varieties = ['a', 'i', 'j', 'jm',
                           'm', 'p', 'y']
@@ -42,5 +35,13 @@ class Parameters:
         self.decay_rate = 0.1
 
         self.commission_rate = 0.0001
+
+        # File location
+        self.root_dir = '/Users/zhangqi/PycharmProjects/A-Deep-Reinforcement-Learning-Framework-for-Index'
+        self.data_file_location = self.root_dir + '/data/'
+        self.model_file_location = self.root_dir + '/model/model_c%f_e%d' % (self.commission_rate, self.n_epochs)
+        self.figure_file_location = self.root_dir + '/'
+        self.logfile = self.root_dir + '/log/t.log'
+
 
 parameters = Parameters()
