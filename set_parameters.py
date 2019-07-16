@@ -27,7 +27,7 @@ class Parameters:
         self.height_cov3 = self.n_cov2_core + 1
 
         # Training
-        self.n_epochs = int(1e6)
+        self.n_epochs = int(1e4)
         self.display_step = int(1e3)
 
         self.start_learning_rate = 0.001

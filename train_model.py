@@ -10,17 +10,30 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
-def miu_iter(miu, wt, wt_prime, c):
+def miu_iter_tensor(miu, wt, wt_prime, c):
     """
 
     :param miu:         shape=(timestamps)
     :param wt:          w_t, shape=(timestamps, varieties)
     :param wt_prime:    w_t prime, has same shape with w_t
     :param c:           commission rate
-    :return:            new miu, shape=(timestamps)
+    :return:            Tensor of new miu, shape=(timestamps)
     """
     miu = miu[:, None]
     return 1 - (2 * c - c ** 2) * tf.reduce_sum(tf.nn.relu(wt_prime - miu * wt), axis=1)
+
+
+def miu_iter_nd(miu, wt, wt_prime, c):
+    """
+
+    :param miu:         numpy.ndarray of miu, shape=(timestamps)
+    :param wt:
+    :param wt_prime:
+    :param c:
+    :return:            numpy.ndarray of new miu, shape=(timestamps)
+    """
+    miu = miu[:, None]
+    return 1 - (2 * c - c ** 2) * np.sum(np.maximum(0, wt_prime - miu * wt), axis=1)
 
 
 class NNAgent:
@@ -91,9 +104,9 @@ class NNAgent:
         w_t_prime = future_omega[:-1, :]
         w_t = self.output_w[1:, :]
         self.mu0 = 1 - tf.reduce_sum(tf.abs(w_t_prime - w_t), axis=1) * self.commission_rate  # [n_batch-1]
-        self.miu = miu_iter(self.mu0, w_t_prime, w_t, self.commission_rate)
+        self.miu = miu_iter_tensor(self.mu0, w_t_prime, w_t, self.commission_rate)
         for i in range(20):
-            self.miu = miu_iter(self.miu, w_t_prime, w_t, self.commission_rate)
+            self.miu = miu_iter_tensor(self.miu, w_t_prime, w_t, self.commission_rate)
 
         p_vec = tf.multiply(omega_y, tf.concat([tf.ones(1, dtype='float32'), self.miu], axis=0))  # [n_batch]
         self.loss = -tf.reduce_mean(tf.log(p_vec))
@@ -189,11 +202,16 @@ class NNAgent:
 
             w_t_prime = (matrix_w[:-1, :] * y) / p_vec[:, None]     # (n-1, varieties)
             w_t = matrix_w[1:, :]   # (n-1, v)
-            miu0 = 1
-            miu1 = 1 - np.sum(abs(w_t_prime - w_t), axis=1) * self.commission_rate   # (n-1)
-            while np.sum(miu0-miu1) > 1e-6:
+
+            miu0 = 1 - np.sum(np.abs(w_t_prime - w_t), axis=1) * self.commission_rate   # (n-1)
+            miu1 = miu_iter_nd(miu0, w_t, w_t_prime, self.commission_rate)
+            print(type(miu0))
+            print(miu0)
+            print(type(miu1))
+            print(miu1)
+            while np.sum(np.abs(miu0-miu1)) > 1e-6:
                 miu0 = miu1
-                miu1 = miu_iter(miu1, w_t, w_t_prime, self.commission_rate)
+                miu1 = miu_iter_nd(miu1, w_t, w_t_prime, self.commission_rate)
 
             rr_vec = p_vec * miu1   # (n-1)
             rr_vec = np.concatenate((np.ones(1), rr_vec), axis=0)   # (n)
