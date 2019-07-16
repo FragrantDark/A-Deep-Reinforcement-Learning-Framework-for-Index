@@ -15,7 +15,7 @@ if __name__ == '__main__':
     dataset = read_data.Dataset(parameters)
 
     model = train_model.NNAgent(parameters)
-    # model.train(dataset)
+    model.train(dataset)
 
     model.test(dataset)
 
