@@ -10,6 +10,19 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
+def miu_iter(miu, wt, wt_prime, c):
+    """
+
+    :param miu:         shape=(timestamps)
+    :param wt:          w_t, shape=(timestamps, varieties)
+    :param wt_prime:    w_t prime, has same shape with w_t
+    :param c:           commission rate
+    :return:            new miu
+    """
+    miu = miu[:, None]
+    return 1 - (2 * c - c ** 2) * tf.reduce_sum(tf.nn.relu(wt_prime - miu * wt), axis=1)
+
+
 class NNAgent:
 
     def __init__(self, parameters):
@@ -73,11 +86,14 @@ class NNAgent:
         omega_y = tf.reduce_sum(tf.multiply(self.y, self.output_w), axis=1)  # [n_batch]
 
         future_omega = tf.multiply(self.y, self.output_w) / omega_y[:, None]  # [n_batch,7]
-        w_t = future_omega[:-1, :]
-        w_t_1 = self.output_w[1:, :]
-        mu = 1 - tf.reduce_sum(tf.abs(w_t - w_t_1), axis=1) * self.commission_rate  # [n_batch-1]
+        w_t_prime = future_omega[:-1, :]
+        w_t = self.output_w[1:, :]
+        self.mu0 = 1 - tf.reduce_sum(tf.abs(w_t_prime - w_t), axis=1) * self.commission_rate  # [n_batch-1]
+        self.miu = miu_iter(self.mu0, w_t_prime, w_t, self.commission_rate)
+        for i in range(20):
+            self.miu = miu_iter(self.miu, w_t_prime, w_t, self.commission_rate)
 
-        p_vec = tf.multiply(omega_y, tf.concat([tf.ones(1, dtype='float32'), mu], axis=0))  # [n_batch]
+        p_vec = tf.multiply(omega_y, tf.concat([tf.ones(1, dtype='float32'), self.miu], axis=0))  # [n_batch]
         self.loss = -tf.reduce_mean(tf.log(p_vec))
 
         self.global_step = tf.Variable(0, trainable=False)
@@ -110,7 +126,7 @@ class NNAgent:
 #             assert not np.any(np.isnan(last_w))
 # =============================================================================
             # calculate output_w
-            _, loss, output_w = sess.run([self.train_op, self.loss, self.output_w],
+            _, loss, output_w, miu0, miu = sess.run([self.train_op, self.loss, self.output_w, self.mu0, self.miu],
                                          feed_dict={self.X: input_x,
                                                     self.y: input_y,
                                                     self.last_w: last_w})
