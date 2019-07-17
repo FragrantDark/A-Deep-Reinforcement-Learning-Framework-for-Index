@@ -249,6 +249,9 @@ class NNAgent:
             matrix_w = dataset.test_matrix_w    # (timestamps, varieties)
             y = matrix_y[1:, :, 0] / matrix_y[:-1, :, 0]    # (n-1, varieties)
 
+            for i in range(1, matrix_w.shape[0]):
+                if (i % 60) != 0:
+                    matrix_w[i, :] = matrix_w[i-1, :]
             result_list = self.rr(y, matrix_w)
 
 
