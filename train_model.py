@@ -177,11 +177,16 @@ class NNAgent:
             saver = tf.train.Saver()
             saver.restore(sess, model)
 
+            dltymean = np.mean(np.abs(dataset.test_dataset[None, 1:, :, 0]/dataset.test_dataset[None, :-1, :, 0] - 1))
+            print('delta_y_mean = %f' % dltymean)
+
             for i in range(0, n_test - n_timesteps):
                 input_data = dataset.test_dataset[None, i:n_timesteps + i + 1, :, :]  # [1, 51, 7, 3]
                 input_x = input_data[:, :-1, :, :] / input_data[:, -2, None, :, 0, None]  # [1, 50, 7, 3]
                 input_y = input_data[:, -1, :, 0] / input_data[:, -2, :, 0]  # [1, 7]
                 last_w = dataset.test_matrix_w[n_timesteps + i - 1, None, :]  # [1, 7]
+
+                logf.write('i:%d\ninput_x.shape:%s\n' % (i, input_x.shape))
 
                 output_w = sess.run(self.output_w, feed_dict={self.X: input_x,
                                                               self.y: input_y,
@@ -211,20 +216,23 @@ class NNAgent:
                 miu0 = miu1
                 miu1 = miu_iter_nd(miu1, w_t, w_t_prime, self.commission_rate)
             print(miu1)
+            print(miu1.shape)
+            for miui in miu1:
+                logf.write('miu: %f\n' % miui)
 
-            rr_vec = p_vec * miu1   # (n-1)
-            rr_vec = np.concatenate((np.ones(1), rr_vec), axis=0)   # (n)
-            result_list = [1]
+            rr_vec = np.log(p_vec) + np.log(miu1)   # (n-1)
+            # rr_vec = np.log(p_vec)
+            result_list = [0]
             for i in range(len(rr_vec)):
-                result_list.append(result_list[-1] * rr_vec[i])
+                result_list.append(result_list[-1] + rr_vec[i])
 
             # Identity weights
             rr_vec_control = np.sum(y, axis=1) / self.n_varieties
-            rr_vec_control = np.concatenate((np.ones(1), rr_vec_control), axis=0)
+            rr_vec_control = np.log(rr_vec_control)
 
-            result_list_control = [1]
+            result_list_control = [0]
             for i in range(len(rr_vec_control)):
-                result_list_control.append(result_list_control[-1] * rr_vec_control[i])
+                result_list_control.append(result_list_control[-1] + rr_vec_control[i])
 
             fig = plt.figure(figsize=(16, 9))
             plt.plot(result_list, label='test', color='blue')
