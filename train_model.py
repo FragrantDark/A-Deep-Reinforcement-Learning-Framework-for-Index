@@ -5,6 +5,7 @@ Created on Tue Jul  9 16:05:39 2019
 @author: dlymhth
 """
 
+import sys
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -199,7 +200,7 @@ class NNAgent:
             print('Test done.')
 
     def plot_test_result(self, dataset, img_name):
-        with open(self.logfile, 'w') as logf:
+        with open(self.logfile, 'a') as logf:
             matrix_y = dataset.test_dataset     # (timestamps, varieties, features)
             matrix_w = dataset.test_matrix_w    # (timestamps, varieties)
             y = matrix_y[1:, :, 0] / matrix_y[:-1, :, 0]    # (n-1, varieties)
@@ -215,13 +216,14 @@ class NNAgent:
             while np.sum(np.abs(miu0-miu1)) > 1e-6:
                 miu0 = miu1
                 miu1 = miu_iter_nd(miu1, w_t, w_t_prime, self.commission_rate)
-            print(miu1)
             print(miu1.shape)
             for miui in miu1:
                 logf.write('miu: %f\n' % miui)
+            np.set_printoptions(threshold=sys.maxsize)
+            print(miu1)
 
             rr_vec = np.log(p_vec) + np.log(miu1)   # (n-1)
-            # rr_vec = np.log(p_vec)
+            rr_vec = np.log(p_vec)
             result_list = [0]
             for i in range(len(rr_vec)):
                 result_list.append(result_list[-1] + rr_vec[i])

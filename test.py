@@ -14,9 +14,9 @@ if __name__ == '__main__':
 
     dataset = read_data.Dataset(parameters)
     model = train_model.NNAgent(parameters)
-    epoch = 50000
-    # dataset.test_matrix_w = dataset.train_matrix_w[:dataset.n_test, :]
-    # dataset.test_dataset = dataset.train_dataset[:dataset.n_test, :, :]
+    epoch = 70000
+    dataset.test_matrix_w = dataset.train_matrix_w[:dataset.n_test, :]
+    dataset.test_dataset = dataset.train_dataset[:dataset.n_test, :, :]
     # dataset.n_test = 5000
     # dataset.test_matrix_w = dataset.test_matrix_w[:dataset.n_test, :]
     # dataset.test_dataset = dataset.test_dataset[:dataset.n_test, :]
