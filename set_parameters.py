@@ -40,9 +40,9 @@ class Parameters:
         # File location
         self.root_dir = '/Users/zhangqi/PycharmProjects/A-Deep-Reinforcement-Learning-Framework-for-Index/fk2'
         self.data_file_location = self.root_dir + '/data/'
-        self.model_file_location = self.root_dir + '/model/model_c%f_e%d' % (self.commission_rate, self.n_epochs)
+        self.model_file_location = self.root_dir + '/model/model_e%d' % (self.n_epochs)
         self.figure_file_location = self.root_dir + '/figures/'
-        self.logfile = self.root_dir + '/log/test.log'
+        self.logfile = self.root_dir + '/log/t.log'
 
 
 parameters = Parameters()

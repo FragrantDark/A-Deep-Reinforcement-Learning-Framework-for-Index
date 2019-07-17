@@ -37,6 +37,18 @@ def miu_iter_nd(miu, wt, wt_prime, c):
     return 1 - (2 * c - c ** 2) * np.sum(np.maximum(0, wt_prime - miu * wt), axis=1)
 
 
+def miu_iter_scalar(miu, wt, wt_prime, c):
+    """
+
+    :param miu:         numpy.ndarray of miu, shape=(timestamps)
+    :param wt:
+    :param wt_prime:
+    :param c:
+    :return:            numpy.ndarray of new miu, shape=(timestamps)
+    """
+    return 1 - (2 * c - c ** 2) * np.sum(np.maximum(0, wt_prime - miu * wt))
+
+
 class NNAgent:
 
     def __init__(self, parameters):
@@ -192,6 +204,20 @@ class NNAgent:
                 output_w = sess.run(self.output_w, feed_dict={self.X: input_x,
                                                               self.y: input_y,
                                                               self.last_w: last_w})
+
+                # if miu < threshold, keep last_w as output_w
+                # last_y = input_data[:, -2, :, 0] / input_data[:, -3, :, 0]  # [1, 7]
+                # w_t = output_w
+                # w_t_prime = (last_w * last_y) / np.sum(last_w * last_y)
+                # miu0 = 1
+                # miu1 = 1 - np.sum(np.abs(w_t_prime - w_t)) * self.commission_rate
+                # while np.sum(np.abs(miu0 - miu1)) > 1e-9:
+                #     miu0 = miu1
+                #     miu1 = miu_iter_scalar(miu1, w_t, w_t_prime, self.commission_rate)
+                # print('i:%d, miu:%f\n' % (i, miu1))
+                # if miu1 < 0.99999:
+                #     output_w = last_w
+
                 dataset.test_matrix_w[n_timesteps + i, :] = output_w
 
                 logf.write('i:%d\nout_w:%s\nlast_w:%s\ny:%s\n\n' % (i, output_w, last_w, input_y))
@@ -199,39 +225,41 @@ class NNAgent:
             sess.close()
             print('Test done.')
 
+    def rr(self, y, w):
+        p_vec = np.sum(w[:-1, :] * y, axis=1)  # (n-1)
+        w_t_prime = (w[:-1, :] * y) / p_vec[:, None]  # (n-1, varieties)
+        w_t = w[1:, :]  # (n-1, v)
+
+        miu0 = 1
+        miu1 = 1 - np.sum(np.abs(w_t_prime - w_t), axis=1) * self.commission_rate  # (n-1)
+        while np.sum(np.abs(miu0 - miu1)) > 1e-6:
+            miu0 = miu1
+            miu1 = miu_iter_nd(miu1, w_t, w_t_prime, self.commission_rate)
+        print(miu1)
+        print(np.sum(np.log(miu1)))
+        rr_vec = np.log(p_vec) + np.log(miu1)  # (n-1)
+        result_list = [0]
+        for i in range(len(rr_vec)):
+            result_list.append(result_list[-1] + rr_vec[i])
+        return result_list
+
     def plot_test_result(self, dataset, img_name):
         with open(self.logfile, 'a') as logf:
             matrix_y = dataset.test_dataset     # (timestamps, varieties, features)
             matrix_w = dataset.test_matrix_w    # (timestamps, varieties)
             y = matrix_y[1:, :, 0] / matrix_y[:-1, :, 0]    # (n-1, varieties)
 
-            p_vec = np.sum(matrix_w[:-1, :] * y, axis=1)    # (n-1)
+            result_list = self.rr(y, matrix_w)
 
-            w_t_prime = (matrix_w[:-1, :] * y) / p_vec[:, None]     # (n-1, varieties)
-            w_t = matrix_w[1:, :]   # (n-1, v)
 
-            miu0 = 1
-            miu1 = 1 - np.sum(np.abs(w_t_prime - w_t), axis=1) * self.commission_rate   # (n-1)
-            print(miu1)
-            while np.sum(np.abs(miu0-miu1)) > 1e-6:
-                miu0 = miu1
-                miu1 = miu_iter_nd(miu1, w_t, w_t_prime, self.commission_rate)
-            print(miu1.shape)
-            for miui in miu1:
-                logf.write('miu: %f\n' % miui)
-            np.set_printoptions(threshold=sys.maxsize)
-            print(miu1)
+            # Identity weights rebalanced
+            identity_matrix_w = np.ones((dataset.n_test, self.n_varieties)) / self.n_varieties
+            result_list_ucrp = self.rr(y, identity_matrix_w)
 
-            rr_vec = np.log(p_vec) + np.log(miu1)   # (n-1)
-            rr_vec = np.log(p_vec)
-            result_list = [0]
-            for i in range(len(rr_vec)):
-                result_list.append(result_list[-1] + rr_vec[i])
 
-            # Identity weights
+            # buy and hold
             rr_vec_control = np.sum(y, axis=1) / self.n_varieties
             rr_vec_control = np.log(rr_vec_control)
-
             result_list_control = [0]
             for i in range(len(rr_vec_control)):
                 result_list_control.append(result_list_control[-1] + rr_vec_control[i])
@@ -239,6 +267,7 @@ class NNAgent:
             fig = plt.figure(figsize=(16, 9))
             plt.plot(result_list, label='test', color='blue')
             plt.plot(result_list_control, label='control', color='red')
+            plt.plot(result_list_ucrp, label='ucrp', color='green')
             plt.legend()
             fig.savefig(self.figure_file_location + img_name + '.jpg')
 
