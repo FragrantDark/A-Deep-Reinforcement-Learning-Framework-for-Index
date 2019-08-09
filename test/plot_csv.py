@@ -94,11 +94,13 @@ if __name__ == '__main__':
 
     df = file2df(fn, ['ts_code', 'trade_date', 'settle', 'vol', 'oi'])
 
-    mmkt, wmkt = tsc_market(df, 'a')
+    code = 'a'
+    mmkt, wmkt = tsc_market(df, code)
 
     fig = plt.figure(figsize=(10, 6))
-    plt.plot(wmkt, label='a wght', color='red')
+    plt.plot(wmkt, label='a wght', color='blue')
     for tpl in mmkt:
         plt.plot(tpl[0], tpl[1], label=tpl[2])
     plt.legend()
+    fig.savefig('%s.jpg' % code)
     plt.show()
