@@ -38,9 +38,10 @@ def tsc_market(df, code):
     """
     1. 品种主力合约行情
     2. 品种持仓量加权行情
-    :param df:
-    :param code:
-    :return:
+    3. 品种主力合约确认m天展仓n天行情
+    :param df:      dataframe
+    :param code:    品种代码
+    :return:    主力合约行情list(包括x, y), 加权行情, m/n行情
     """
     code = code.upper()
     ddic = {}   # ddic[date] = [(code, price, oi)]
@@ -85,7 +86,49 @@ def tsc_market(df, code):
     for t in rng:
         mres.append((list(range(t[0], t[1])), main_mkt[t[0]:t[1]], t[2]))
 
-    return mres, [x[2] for x in rr]
+    # M/N prices
+    M, N = 3, 5
+    cm, nm, dm, cmc, nmc, pm = rr[0][3], '', '', 0, 0, ''
+    mn_r = [rr[0][1]]
+    state = 0
+    for i in range(1, len(rr)):
+        dm = rr[i][3]
+        dt = rr[i][0]
+        cm_prc = 0
+        for tpl in ddic[dt]:
+            if tpl[0] == cm:
+                cm_prc = tpl[1]
+                break
+        if state == 0:
+            mn_r.append(cm_prc)
+            if dm > cm:
+                nm, nmc = dm, 1
+                state = 1
+        elif state == 1:
+            mn_r.append(cm_prc)
+            if dm == nm:
+                if nmc < M:
+                    nmc += 1
+                else:
+                    state = 2
+                    pm, cm, cmc = cm, nm, 1
+            elif dm > cm:
+                nm, nmc = dm, 1
+            else:   # dm <= cm
+                state = 0
+        else:   # state == 2
+            pm_prc = 0
+            for tpl in ddic[dt]:
+                if tpl[0] == pm:
+                    pm_prc = tpl[1]
+                    break
+            mn_r.append((cmc * cm_prc + (N-cmc) * pm_prc) / N)
+            if cmc < N:
+                cmc += 1
+            else:
+                state = 0
+
+    return mres, [x[2] for x in rr], mn_r
 
 
 if __name__ == '__main__':
@@ -95,10 +138,11 @@ if __name__ == '__main__':
     df = file2df(fn, ['ts_code', 'trade_date', 'settle', 'vol', 'oi'])
 
     code = 'a'
-    mmkt, wmkt = tsc_market(df, code)
+    mmkt, wmkt, nmkt = tsc_market(df, code)
 
     fig = plt.figure(figsize=(10, 6))
     plt.plot(wmkt, label='a wght', color='blue')
+    plt.plot(nmkt, label='a M/N', color='red')
     for tpl in mmkt:
         plt.plot(tpl[0], tpl[1], label=tpl[2])
     plt.legend()
